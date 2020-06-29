@@ -166,6 +166,7 @@ extern "C" void kokkosp_deallocate_data(const SpaceHandle space, const char* lab
   if(space_size[space_i] >= size) {
     space_size[space_i] -= size;
     space_size_track[space_i].push_back(std::make_tuple(time,space_size[space_i],max_mem_usage()));
+    events.back().print_record();
   }
 
   int i=events.size();

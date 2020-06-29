@@ -54,11 +54,12 @@
 
 #include "kp_memory_events.hpp"
 #include "kp_timer.hpp"
+#include "mpi.h"
 
 int num_spaces;
 std::vector<std::tuple<double,uint64_t,double> > space_size_track[16];
 uint64_t space_size[16];
-
+uint64_t max_size[16];
 static std::mutex m;
 
 Kokkos::Timer timer;
@@ -76,9 +77,10 @@ extern "C" void kokkosp_init_library(const int loadSeq,
   void* deviceInfo) {
 
   num_spaces = 0;
-  for(int i=0; i<16; i++)
+  for(int i=0; i<16; i++) {
     space_size[i] = 0;
-  
+    max_size[i] = 0;
+  }
   timer.reset();
 }
 
@@ -126,6 +128,15 @@ extern "C" void kokkosp_allocate_data(const SpaceHandle space, const char* label
   }
   space_size[space_i] += size;
   space_size_track[space_i].push_back(std::make_tuple(time,space_size[space_i],max_mem_usage()));
+
+  max_size[space_i] = std::max(max_size[space_i],space_size[space_i]);
+  // printf("Allocating: %s, size=%i\n",label,size);
+  // printf("size=%i, max_size=%i\n",space_size[space_i],max_size[space_i]);
+
+  // int rank = -1;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // if (rank == 0)
+  printf("%lf %.1lf %.1lf %.1lf    Alloc: %s, bytes=%i\n",(double) time, (double(space_size[space_i])/1024./1024.),(double(max_size[space_i])/1024./1024.),((double) max_mem_usage())/1024./1024.,label,size);
 }
 
 
@@ -147,5 +158,12 @@ extern "C" void kokkosp_deallocate_data(const SpaceHandle space, const char* lab
     space_size[space_i] -= size;
     space_size_track[space_i].push_back(std::make_tuple(time,space_size[space_i],max_mem_usage()));
   }
+
+  // printf("Deallocating: %s, size=%i\n",label,size);
+
+  // int rank = -1;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // if (rank == 0)
+  printf("%lf %.1lf %.1lf %.1lf    Dealloc: %s, bytes=%i\n",(double) time, (double(space_size[space_i])/1024./1024.),(double(max_size[space_i])/1024./1024.),((double) max_mem_usage())/1024./1024.,label,size);
 }
 
